@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "9 16 * * 1"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        cfg:
+          - conda-env: linux
+            python-version: "3.12"
+            julia-version: "1.10"
+            label: conda
+            runs-on: ubuntu-latest
+            shell: 'bash -l {0}'
+
+          - conda-env: null
+            python-version: "3.12"
+            julia-version: "1.10"
+            label: installer
+            runs-on: ubuntu-latest
+            shell: 'bash -e {0}'
+
+          - conda-env: null
+            python-version: "3.12"
+            julia-version: "1.10"
+            label: installer
+            runs-on: macos-13
+            # runs-on: macos-latest  # fails b/c cbc can't compile on M1 (the GHA runners)
+            #shell: 'bash -e {0}'
+            shell: bash
+
+          - conda-env: linux
+            python-version: "3.12"
+            julia-version: "1.10"
+            label: conda
+            runs-on: macos-13
+            shell: 'bash -l {0}'
+
+    defaults:
+      run:
+        shell: ${{ matrix.cfg.shell }}
+
+    name: "🐍 ${{ matrix.cfg.python-version }} • ${{ matrix.cfg.label }} • ${{ matrix.cfg.runs-on }}"
+    runs-on: ${{ matrix.cfg.runs-on }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Conda Python ${{ matrix.cfg.python-version }} and power software
+      uses: conda-incubator/setup-miniconda@v3
+      if: matrix.cfg.label == 'conda'
+      with:
+        activate-environment: test
+        environment-file: devtools/conda-envs/${{ matrix.cfg.conda-env }}.yaml
+        python-version: ${{ matrix.cfg.python-version }}
+        auto-activate-base: false
+        show-channel-urls: true
+        add-pip-as-python-dependency: true
+        conda-remove-defaults: true
+
+    - name: Setup Python ${{ matrix.cfg.python-version }}
+      if: matrix.cfg.label == 'installer'
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.cfg.python-version }}
+
+    - name: Setup Python power software
+      if: matrix.cfg.label == 'installer'
+      run: |
+        uname -p
+        which python pip
+        python --version
+        python -m pip install numpy pandas scipy pytest grid2op julia "pandapower==2.14.11"
+
+    - name: Setup Julia ${{ matrix.cfg.julia-version }}
+      if: matrix.cfg.label == 'installer'
+      uses: julia-actions/setup-julia@v2
+      with:
+        version: ${{ matrix.cfg.julia-version }}
+
+    - name: Cache Julia
+      if: matrix.cfg.label == 'installer'
+      uses: julia-actions/cache@v2
+      with:
+        cache-name: ${{ matrix.cfg-runs-on }}-test-${{ matrix.cfg.julia-version }}-${{ matrix.cfg.python-version }}
+        cache-packages: false
+
+    - name: Install Julia power software
+      run: |
+        julia -e '
+            using Pkg
+            Pkg.add([
+                Pkg.PackageSpec(;name="Ipopt"),
+                Pkg.PackageSpec(;name="PowerModels", version="0.21.3"),
+                Pkg.PackageSpec(;name="PyCall"),
+                Pkg.PackageSpec(;url="https://github.com/loriab/PandaModels.jl", rev="update_pm")
+            ])'
+
+    - name: Install PandaModelsBackend
+      run: |
+        python -m pip install -e .[tests]
+
+    - name: Environment information
+      run: |
+        python -m pip list
+        python -m pip list | grep -e power -e grid -e panda
+        which python python-jl julia
+        python --version
+        python-jl --version
+        julia --version
+        julia -e 'using Pkg; Pkg.status(); Pkg.status(outdated=true)'
+
+    - name: Test PowerModels in Julia
+      if: false
+      run: |
+        julia -e 'using PyCall; math = pyimport("math"); print(math.sin(math.pi/4))'
+        julia -e 'using Pkg; Pkg.test("PowerModels")'
+        # PM testing above is clean but takes 6m, so optionally toggle off
+
+    - name: Test PandaModels in Julia
+      run: |
+        julia -e 'using Pkg; Pkg.add(Pkg.PackageSpec(;name="Ipopt", version="0.9"))'
+        julia -e 'using Pkg; Pkg.status(); Pkg.status(outdated=true)'
+        julia -e 'using PandaModels'
+        #TMPjulia -e 'using Pkg; Pkg.test("PandaModels")'
+        # PdM testing above has a couple failures b/c Ipopt=1 unless downgrade (taking PM with it)
+
+    - name: Special setup Mac
+      if: runner.os == 'macOS'
+      run: |
+        # fix hard coded path
+        if [[ "${{ matrix.cfg.label }}" == "installer" ]]; then
+          :
+          julia -e 'ENV["PYTHON"]="/Users/runner/hostedtoolcache/Python/3.12.9/x64/bin/python"; using Pkg; Pkg.build("PyCall")'
+        fi
+        #if [[ "${{ matrix.cfg.label }}" == "conda" ]]; then
+        #  :
+        #  julia -e 'ENV["PYTHON"]="/Users/runner/miniconda3/envs/test/bin/python"; using Pkg; Pkg.build("PyCall")'
+        #fi
+
+    - name: Test PowerModels in PandaPower
+      run: |
+        which python python-jl
+        python-jl -m pytest -v $(dirname $(which python))/../lib/python${{ matrix.cfg.python-version }}/site-packages/pandapower/test/opf/test_pandamodels_runpm.py
+        # use python-jl instead of python above if get a static libpython error
+        # loc is simply $CONDA_PREFIX but the setup-python counterpart env.pythonLocation seems broken
+        # PdP testing above has a couple failures b/c Ipopt=1 unless downgrade (taking PM with it)
+
+    - name: Test PandaModelsBackend
+      # if: false  # for now since there's some issues
+      run: |
+        cd tests
+        which python python-jl
+        python-jl test_basic_usage.py
+        # python test_backend_api.py
+

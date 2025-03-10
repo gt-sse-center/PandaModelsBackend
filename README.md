@@ -58,7 +58,7 @@ env = grid2op.make(env_name, backend=backend)
 ## Build
 ```
 git clone https://github.com/gt-sse-center/PandaModelsBackend.git
-cd PandaModelBackend.git
+cd PandaModelsBackend
 python3 -m build
 pip install -e .
 ```

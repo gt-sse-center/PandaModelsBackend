@@ -12,6 +12,13 @@ requires-python = ">=3.12"
 [project.urls]
 repository = "https://github.com/gt-sse-center/PandaModelsBackend"
 
+[project.optional-dependencies]
+tests = [
+    "pytest",
+    "setuptools",
+    # grid2op uses pkg_resources
+]
+
 [build-system]
 requires = [
     "setuptools",
