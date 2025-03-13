@@ -1,29 +1,26 @@
+# This is the minimal environment for PandaModelsBackend plus setup for Julia.
+#   See unix_rl2grid.yaml for an env spec accommodating rl2grid.
+
 name: test
 channels:
   - conda-forge
 dependencies:
-  - python=3.12
-  - pytorch
-  - tensorboard
-  - wandb
-  - gymnasium>=0.29.1
-  - stable-baselines3>=2.3.2
+  - python
+  - numpy=1       # restriction from pandapower
   - scipy
-  - pyjulia  # brings julia
+  - pandas
+  - pyjulia       # brings julia
   - pandapower=2
   - pytest-xdist  # optional, for testing
-  - curl<8.10  # avoid segfault in Julia w/ curl v8.10 . recheck periodically
+  - curl<8.10     # avoid segfault in Julia w/ curl v8.10 . recheck periodically
+  - setuptools
   - pip
   - pip:
     - grid2op
-    - lightsim2grid  # optional
-    - matpowercaseframes  # optional
-  # - cxx-compiler  # optional if needed for further pip packages
+  # - lightsim2grid  # optional
+  # - matpowercaseframes  # optional
+  # - cxx-compiler  # optional if needed for further pip packages requiring compilation
 
 # Notes:
-# * defaults and pytorch channels removed as likely unneeded.
-# * cpuonly removed b/c not a c-f pkg
 # * py312 has been tested. others likely work
-# * pytorch was pinned at 2.2.0 and scipy at 1.11.3 . reset if needed for repro, but generic better.
-# * recent stable-baselines3 can accommodate gymnasium v1, so pins relaxed to mins. reset if needed for repro. etc.
-
+# * works as-is for Linux and Intel Mac. conda packages for Julia aren't available for Silicon Mac.

@@ -18,10 +18,10 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "numpy",
+    "numpy<2.0",  # restriction for pandapower
     "scipy",
     "pandas",
-    "pandapower",
+    "pandapower<3.0",
     # packaging?
     "grid2op",
 ]

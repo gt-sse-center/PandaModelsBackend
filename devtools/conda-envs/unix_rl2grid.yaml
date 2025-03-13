@@ -1,0 +1,32 @@
+# Whereas unix.yaml is the minimal environment for PandaModelsBackend, this conda env spec is derived
+#   from that used by the Donti lab to include rl2grid in the codestack.
+
+name: rl2grid_pm
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pytorch
+  - tensorboard
+  - wandb
+  - gymnasium>=0.29.1
+  - stable-baselines3>=2.3.2
+  - scipy
+  - pyjulia  # brings julia
+  - pandapower=2
+  - pytest-xdist  # optional, for testing
+  - curl<8.10  # avoid segfault in Julia w/ curl v8.10 . recheck periodically
+  - pip
+  - pip:
+    - grid2op
+    - lightsim2grid  # optional
+    - matpowercaseframes  # optional
+  # - cxx-compiler  # optional if needed for further pip packages requiring compilation
+
+# Notes:
+# * defaults and pytorch channels removed as likely unneeded.
+# * cpuonly removed b/c not a c-f pkg
+# * py312 has been tested. others likely work
+# * pytorch was pinned at 2.2.0 and scipy at 1.11.3 . reset if needed for repro, but generic better.
+# * recent stable-baselines3 can accommodate gymnasium v1, so pins relaxed to mins. reset if needed for repro. etc.
+
