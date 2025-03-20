@@ -47,6 +47,13 @@ jobs:
             # runs-on: macos-latest  # fails b/c cbc can't compile on M1 (the GHA runners)
             shell: 'bash -e {0}'
 
+          - conda-env: null
+            python-version: "3.12"
+            julia-version: "1.10"
+            label: script
+            runs-on: ubuntu-latest
+            shell: 'bash -l {0}'
+
     defaults:
       run:
         shell: ${{ matrix.cfg.shell }}
@@ -59,6 +66,14 @@ jobs:
       with:
         fetch-depth: 0
         persist-credentials: false
+
+    - name: Install Conda Python ${{ matrix.cfg.python-version }}
+      if: matrix.cfg.label == 'script'
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        show-channel-urls: true
+        auto-activate-base: true
+        activate-environment: ""
 
     - name: Install Conda Python ${{ matrix.cfg.python-version }} and power software
       if: matrix.cfg.label == 'conda'
@@ -100,6 +115,7 @@ jobs:
         cache-packages: false
 
     - name: Install Julia power software
+      if: matrix.cfg.label != 'script'
       run: |
         julia -e '
             using Pkg
@@ -111,10 +127,12 @@ jobs:
             ])'
 
     - name: Install PandaModelsBackend
+      if: matrix.cfg.label != 'script'
       run: |
         python -m pip install -e .[tests]
 
     - name: Environment information
+      if: matrix.cfg.label != 'script'
       run: |
         python -m pip list
         python -m pip list | grep -e power -e grid -e panda
@@ -124,14 +142,21 @@ jobs:
         julia --version
         julia -e 'using Pkg; Pkg.status(); Pkg.status(outdated=true)'
 
+    - name: Check all-in-one install script
+      if: matrix.cfg.label == 'script'
+      run: |
+        source devtools/linux_conda_install.sh
+
     - name: Test PowerModels in Julia
       # if: false
+      if: matrix.cfg.label != 'script'
       run: |
         julia -e 'using PyCall; math = pyimport("math"); print(math.sin(math.pi/4))'
         julia -e 'using Pkg; Pkg.test("PowerModels")'
         # PM testing above is clean but takes 6m, so optionally toggle off
 
     - name: Test PandaModels in Julia
+      if: matrix.cfg.label != 'script'
       run: |
         julia -e 'using Pkg; Pkg.add(Pkg.PackageSpec(;name="Ipopt", version="0.9"))'
         julia -e 'using Pkg; Pkg.status(); Pkg.status(outdated=true)'
@@ -154,6 +179,7 @@ jobs:
         sed -E -i.bak "s;time.sleep(1);time.sleep(8);g" $(dirname $(which python))/../lib/python${{ matrix.cfg.python-version }}/site-packages/grid2op/MakeEnv/Make.py
 
     - name: Test PowerModels in PandaPower
+      if: matrix.cfg.label != 'script'
       run: |
         which python python-jl
         python-jl -m pytest -v $(dirname $(which python))/../lib/python${{ matrix.cfg.python-version }}/site-packages/pandapower/test/opf/test_pandamodels_runpm.py
@@ -162,12 +188,13 @@ jobs:
         # PdP testing above has a couple failures b/c Ipopt=1 unless downgrade (taking PM with it)
 
     - name: Test PandaModelsBackend (basic)
-      if: runner.os == 'Linux'
+      if: runner.os == 'Linux' && matrix.cfg.label != 'script'
       run: |
         which python python-jl
         python-jl tests/test_basic_usage.py
 
     - name: Test PandaModelsBackend (API)
+      if: matrix.cfg.label != 'script'
       run: |
         python-jl tests/test_backend_api.py
 
