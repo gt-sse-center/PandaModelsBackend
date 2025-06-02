@@ -23,7 +23,7 @@ dependencies = [
     "pandas",
     "pandapower<3.0",
     # packaging?
-    "grid2op<1.11",
+    "grid2op",  # advance to >=1.11 or an alpha once minted
 ]
 
 [project.urls]

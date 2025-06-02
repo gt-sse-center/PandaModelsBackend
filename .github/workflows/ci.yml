@@ -151,6 +151,12 @@ jobs:
             #    Pkg.PackageSpec(;url="https://github.com/loriab/PandaModels.jl", rev="update_pm")
             #])'
 
+    - name: Special Config - Dev grid2op
+      if: matrix.cfg.label != 'script'
+      run: |
+        # both "conda" and "installer" lanes use pypi g2o
+        python -m pip install 'git+https://github.com/Grid2op/grid2op.git@dev_1.11.0' --no-deps
+
     - name: Install PandaModelsBackend
       if: matrix.cfg.label != 'script'
       run: |

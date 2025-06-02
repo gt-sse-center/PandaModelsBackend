@@ -101,6 +101,7 @@ python test_backend_api.py
 
 ## Release Procedure
 
+* Edit the backend with any changes to the upstream grid2op PandaPowerBackend file.
 * On a local clone on branch `main`, update the [CHANGELOG](changelog.md) with PRs, the new version number, and the release date. Commit it.
 * Make an annotated tag for the new version. Push it along with any cleanup commits (e.g., changelog above). If you've forked the repo, "origin" will probably be "upstream". See `git remote -v` for names. You may need to disable direct push in [Settings](https://github.com/MOSSLab-MIT/PandaModelsBackend/settings) (Branches, `main`, Edit)
 ```

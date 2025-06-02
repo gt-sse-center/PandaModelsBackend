@@ -18,7 +18,7 @@
 -->
 
 
-## v0.2.0 / 2025-MM-DD (Unreleased)
+## v0.3.0 / 2025-MM-DD (Unreleased)
 
 #### Breaking Changes
 
